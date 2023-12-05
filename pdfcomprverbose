@@ -1,0 +1,73 @@
+#!/bin/bash
+
+
+Help()
+{
+	echo
+	echo " Flatten a .pdf-file and compress it. Default compression level: 80."
+	echo
+	echo
+	echo " USAGE & EXAMPLES:"
+	echo
+	echo " general usage:"
+	echo "\$ pdfcomprverbose input.pdf [0-100]"
+	echo
+	echo " input file 'test.pdf' with default quality setting (80):"
+	echo "\$ pdfcomprverbose test.pdf"
+	echo " output file 'test_compr80.pdf'"
+	echo
+	echo " input file 'test.pdf' with quality setting 50"
+	echo "\$ pdfcomprverbose test.pdf 50"
+	echo " output file 'test_compr50.pdf'"
+	echo
+	echo
+	echo " DEPENDENCIES:"
+	echo " - pdftoppm"
+	echo " - convert (imagemagick/ghostscript)"
+	echo
+	echo
+	echo " TROUBLESHOOTING:"
+	echo
+	echo " In case convert is not authorized:"
+	echo " Check if Ghostscript version is 9.24 or higher (\$ ghostscript --version)."
+	echo " Open the ImageMagick policy file, e.g., /etc/ImageMagick-6/policy.xml."
+	echo " Change the following line"
+	echo "     <policy domain=\"coder\" rights=\"none\" pattern=\"PDF\" />"
+	echo " to"
+	echo "     <!-- <policy domain=\"coder\" rights=\"none\" pattern=\"PDF\" /> -->"
+	echo " and save the document."
+	echo
+}
+
+while getopts ":h" option; do
+	case $option in
+		h) # display help
+			Help
+			exit;;
+	esac
+done
+
+
+if ! [[ "$1" == *.pdf ]]
+then
+	echo "Input file must be a pdf file."
+	exit 1
+fi
+
+OPTARG=${2-80}
+
+BASEFILENAME=$(basename "$1" .pdf)
+
+printf '%s' "Preparations ... "
+rm -rf /tmp/"${BASEFILENAME}"
+mkdir /tmp/"${BASEFILENAME}"
+printf '%s\n' "Done"
+printf '%s' "Flatten pdf pages to images ... "
+pdftoppm -png "$1" /tmp/"${BASEFILENAME}"/pdftoppm_to_png
+printf '%s\n' "Done"
+printf '%s' "Compress images and merge into new pdf ... "
+convert /tmp/"${BASEFILENAME}"/pdftoppm_to_png*.png -compress jpeg -quality "$OPTARG" "${BASEFILENAME}_compr${OPTARG}.pdf"
+printf '%s\n' "Done"
+printf '%s' "Remove temp files ... "
+rm -rf /tmp/"${BASEFILENAME}"
+printf '%s\n' "Done"
